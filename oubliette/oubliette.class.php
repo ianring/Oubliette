@@ -1,4 +1,6 @@
 <?php
+// @requires https://github.com/nicolasff/phpredis
+
 require("config.php");
 
 
@@ -6,43 +8,59 @@ require("config.php");
 class Oubliette {
 	
 	// these are used to build redis keys 
-	const timeout = "timeout";
-	const banned = "banned";
+	const grey = "grey";
+	const black = "black";
 	const ratelimit = "ratelimit";
 	const chances = "chances";
-	const whitelist = "whitelist";
+	const white = "white";
 	
 	function __construct(){
 		$this->redis = new Redis();
-		$this->redis->connect(OUBLIETTE_REDIS_HOST, OUBLIETTE_REDIS_PORT);
+		$success = $this->redis->connect(OUBLIETTE_REDIS_HOST, OUBLIETTE_REDIS_PORT);
+		if ($success === false){
+			die('error: oubliette couldn\'t connect to Redis');
+		}
+		
+		touch(OUBLIETTE_LOG);
+		if (file_exists(OUBLIETTE_LOG) == false){
+			file_put_contents(OUBLIETTE_LOG, '');
+		}
+		if (!is_writable(OUBLIETTE_LOG)){
+			die('error: oubliette log file is not writable');
+		}
+		
 	}
 	
+	function log($str){
+		file_put_contents(OUBLIETTE_LOG, date("Y-m-d H:i:s ".$str."\n", FILE_APPEND);
+	}
 	
-	function test(){
+	public function test(){
+		// this is the standard test to see if an IP is allowed or not.
 		if ($this->is_whitelisted()){
 			return true;
 		}
-		if ($this->is_jailed()){
+		if ($this->is_blacklisted()){
 			$this->render_page('forbidden');
 			die();
 		}
-		if ($this->is_penalized()){
+		if ($this->is_greylisted()){
 			$this->render_page('timeout');
 			die();
 		}
-		if ($this->ratelimiter()){
+		if ($this->ratelimit()){
 			$this->render_page('ratelimited');
 			die();
 		}
 	}
 	
 	
-	function ratelimiter($ip = null){
+	public function ratelimit($ip = null){
 		if (!OUBLIETTE_RATE_LIMIT_ENABLED){
 			return false;
 		}
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
 		$key = OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":" . $ip;
 		
@@ -62,76 +80,117 @@ class Oubliette {
 	}
 	
 	function honeypot(){
-		$html = '<a href="'.OUBLIETTE_PATH.'/index.php">hey you click on this SUCKER!</a>';
-		$html .= '<img src="'.OUBLIETTE_PATH.'/pixel.gif" border="0" alt=" " width="1" height="1"/>';
+		$html = '';
+		$html .= "<style>.honeypot1{overflow:hidden;width:1px;height:1px;background:transparent;}</style>";
+		$html .= '<a href="'.OUBLIETTE_PATH.'/index.php" class="honeypot1">click here to download all the internets</a>';
 		return $html;
 	}
 	
 	
-	public function penalize($ip = null) {
-		// puts an IP into a timeout
+	public function whitelist_add($ip = null){
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
 		
-		$this->redis->set(OUBLIETTE_KEY_PREFIX.":".self::peanlized.":".$ip, $ip);
-		$this->redis->expire(OUBLIETTE_KEY_PREFIX.":".self::peanlized.":".$ip, OUBLIETTE_PENALTY_DURATION);
+		$this->redis->sAdd($this->_get_key('white'), $ip);
 		
 		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
-			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been penalized.");
+			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been whitelisted.");
 		}
 		return true;
 	}
 	
-	public function whitelist($ip = null){
-		// puts an IP into banned
+	public function greylist_add($ip = null, $time = null) {
+		// puts an IP into a timeout
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
+		}
+		if ($time == null){
+			$time = OUBLIETTE_PENALTY_DURATION;
 		}
 		
-		$this->redis->sAdd(OUBLIETTE_KEY_PREFIX.":".self::whitelist, $ip);
+		$this->redis->set($this->_get_key('grey',$ip), $ip);
+		$this->redis->expire($this->_get_key('grey',$ip), $time);
+		
+		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
+			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been greylisted.");
+		}
 		return true;
 	}
 	
-	public function forbid($ip = null){
+	public function blacklist_add($ip = null){
 		// puts an IP into banned
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
-		if ($this->is_jailed($ip)){
+		if ($this->is_blacklisted($ip)){
 			return true;
 		}
 		
-		$this->redis->sAdd(OUBLIETTE_KEY_PREFIX.":".self::banned, $ip);
-		$chances = $this->redis->incr(OUBLIETTE_KEY_PREFIX.":".self::chances.":".$ip);
-		
-		if ($chances > OUBLIETTE_UNBAN_CHANCES){
-			$this->redis->sAdd(OUBLIETTE_KEY_PREFIX.":".self::permanent, $ip);
-		}
+		$this->redis->sAdd($this->_get_key('black', $ip), $ip);
+		$chances = $this->redis->incr($this->_get_key('chances',$ip));
 		
 		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
-			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been banned.");
+			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been blacklisted.");
 		}
+		return true;
+	}
+	
+	public function whitelist_remove($ip = null){
+		if ($ip == null){
+			$ip = $this->_get_ip();
+		}
+		$this->redis->sRem($this->_get_key('white'), $ip);
+		return true;
+	}
+	
+	public function greylist_remove($ip = null){
+		if ($ip == null){
+			$ip = $this->_get_ip();
+		}
+		$this->redis->del($this->_get_key('grey',$ip));
+		return true;
+	}
+	
+	public function blacklist_remove($ip = null){
+		if ($ip == null){
+			$ip = $this->_get_ip();
+		}
+		$this->redis->sRem($this->_get_key('black'), $ip);
 		return true;
 	}
 	
 	public function forgive($ip = null, $force = false) {
 		// removes an IP from all lists
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
 		// if this ip has exceeded its unbanning limit, then we won't do it.
-		$chances = $this->redis->incr(OUBLIETTE_KEY_PREFIX.":".self::chances.":".$ip);
+		$chances = $this->redis->get($this->_get_key('chances', $ip));
 		
 		if ($chances > OUBLIETTE_UNBAN_CHANCES && !$force){
 			return false;
 		}
 		
-		$this->redis->sRem(OUBLIETTE_KEY_PREFIX.":".self::banned, $ip);
+		$this->redis->sRem($this->_get_key('black'), $ip);
+		$this->redis->del($this->_get_key('grey',$ip));
 		return true;
 	}
 	
 	
+	/*
+	* removes all records of that IP, even from the whitelist
+	* clears the "attempts" so that an IP can be unbanned. 
+	*/
+	public function forget($ip = null) {
+		if ($ip == null){
+			$ip = $this->_get_ip();
+		}
+		$this->redis->del($this->_get_key('chances',$ip));
+		$this->whitelist_remove($ip);
+		$this->greylist_remove($ip);
+		$this->blacklist_remove($ip);
+	}
 	
 	
 	/**
@@ -175,27 +234,26 @@ class Oubliette {
 		return true;
 	}
 	
-	function get_ip(){ return $_SERVER['REMOTE_ADDR']; }
 	
 	function is_whitelisted($ip = null){
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
-		return $this->redis->sIsMember(OUBLIETTE_KEY_PREFIX . ":" . self::whitelist, $ip);
+		return $this->redis->sIsMember($this->_get_key('white'), $ip);
 	}
 	
-	function is_jailed($ip = null){
+	function is_blacklisted($ip = null){
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
-		return $this->redis->sIsMember(OUBLIETTE_KEY_PREFIX . ":" . self::banned, $ip);
+		return $this->redis->sIsMember($this->_get_key('black'), $ip);
 	}
 	
-	function is_penalized($ip = null){
+	function is_greylisted($ip = null){
 		if ($ip == null){
-			$ip = $this->get_ip();
+			$ip = $this->_get_ip();
 		}
-		$g = $this->redis->get(OUBLIETTE_KEY_PREFIX.":".self::timeout.":".$ip);
+		$g = $this->redis->get($this->_get_key('grey',$ip));
 		if (!empty($g)) {
 			return true;
 		}
@@ -233,6 +291,36 @@ class Oubliette {
 				break;
 		}
 	}
+	
+	private function _get_key($whichone, $ip=null){
+		switch($whichone){
+			case "black":
+				return OUBLIETTE_KEY_PREFIX . ":" . self::black;
+				break;
+			case "grey":
+				if ($ip == null){
+					$ip = $this->_get_ip();
+				}
+				return OUBLIETTE_KEY_PREFIX . ":" . self::grey . ":" . $ip;
+				break;
+			case "white":
+				return OUBLIETTE_KEY_PREFIX . ":" . self::white;
+				break;
+			case "chances":
+				if ($ip == null){
+					$ip = $this->_get_ip();
+				}
+				return OUBLIETTE_KEY_PREFIX . ":" . self::chances . ":" . $ip;
+			case "ratelimit":
+				if ($ip == null){
+					$ip = $this->_get_ip();
+				}
+				return OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":" . $ip;
+				
+		}
+	}
+	
+	private function _get_ip(){ return $_SERVER['REMOTE_ADDR']; }
 	
 }
 

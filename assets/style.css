@@ -39,3 +39,32 @@ form.example, .example form{
 li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 { 
 	list-style-type: decimal !important 
 }
+
+.big-icon-holder{
+	height:200px;
+	line-height:200px;
+}
+
+
+.methodsynopsis{
+	font-size:11px;
+	font-family: monospace;
+	font-weight: normal;
+	
+}
+.methodsynopsis .funcname{
+	color:#000;
+	font-weight:bold;
+}
+.methodsynopsis .type{
+	color:#660066;
+}
+
+.methodsynopsis .parameter{
+	color: #333366;
+	font-weight: bold;
+}
+
+
+
+

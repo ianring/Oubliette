@@ -1,5 +1,5 @@
 <?php
-include("oubliette.class.php");
+include("../oubliette.class.php");
 $o = new Oubliette();
 if (isset($_POST['action'])){
 	if ($_POST['action'] == 'add'){
