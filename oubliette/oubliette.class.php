@@ -32,7 +32,7 @@ class Oubliette {
 	}
 	
 	function log($str){
-		file_put_contents(OUBLIETTE_LOG, date("Y-m-d H:i:s ".$str."\n", FILE_APPEND);
+		file_put_contents(OUBLIETTE_LOG, date("Y-m-d H:i:s") .$str."\n", FILE_APPEND);
 	}
 	
 	public function test(){
@@ -263,20 +263,31 @@ class Oubliette {
 	
 	function save($str){
 		// str is the content of a textarea, it's ip addresses separated with newlines
-		$this->redis->del(OUBLIETTE_KEY_PREFIX.":".self::banned);
+		$this->redis->del($this->_get_key('black'));
 		$lines = explode("\n",$str);
 		foreach($lines as $line){
 			$line = trim($line);
 			if (!empty($line)){
-				$this->redis->sAdd(OUBLIETTE_KEY_PREFIX.":".self::banned, $line);
+				$this->redis->sAdd($this->_get_key('black'), $line);
 			}
 		}
 		return true;
 	}
 	
 	
-	function show(){
-		return $this->redis->sMembers(OUBLIETTE_KEY_PREFIX.":".self::banned);
+	function show($list){
+		switch($list){
+			case 'black':
+				return $this->redis->sMembers($this->_get_key('black'));
+				break;
+			case 'grey':
+				return $this->redis->keys(OUBLIETTE_KEY_PREFIX . ":" . self::grey . ":". "*");
+				break;
+			case 'white':
+				return $this->redis->sMembers($this->_get_key('white'));
+				break;
+			
+		}
 	}
 	
 	function render_page($page){

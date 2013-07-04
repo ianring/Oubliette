@@ -1,0 +1,30 @@
+#blacklist{
+	background:black;
+}
+#greylist{
+	background:#999;
+}
+#whitelist{
+	background:white;
+}
+
+#blacklist,#whitelist,#greylist{
+	border:1px solid #666;
+	padding:18px;
+}
+
+.listitem{
+	border:2px solid #999;
+	border-radius: 10px;
+	margin:5px;
+	padding:10px;
+	background:white;
+}
+
+.icon {
+	border-bottom:1px solid #666;
+	margin-bottom:18px;
+}
+.icon img{
+	height:60px;
+}

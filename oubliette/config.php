@@ -1,5 +1,5 @@
 <?php
-define("OUBLIETTE_ADMIN_NAME","admin");
+define("OUBLIETTE_ADMIN_USER","admin");
 define("OUBLIETTE_ADMIN_PASSWORD","password");
 
 define("OUBLIETTE_REDIS_HOST","localhost");
