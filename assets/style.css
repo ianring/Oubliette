@@ -47,9 +47,11 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 
 
 .methodsynopsis{
-	font-size:11px;
+	font-size:15px;
 	font-family: monospace;
 	font-weight: normal;
+	background:#f3f3f3;
+	padding:18px;
 	
 }
 .methodsynopsis .funcname{
@@ -65,6 +67,15 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 	font-weight: bold;
 }
 
+div.parameters{
+	padding:18px;
+	background:#EEEEF6;
+	border-top:1px solid #666699;
+}
 
-
+div.parameters dt{
+	font-family: monospace;
+	color:#000;
+	font-weight: bold;
+}
 
