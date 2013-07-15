@@ -1,7 +1,7 @@
 <?php
 // @requires https://github.com/nicolasff/phpredis
 
-require("config.php");
+require_once("config.php");
 
 
 
@@ -12,7 +12,9 @@ class Oubliette {
 	const black = "black";
 	const ratelimit = "ratelimit";
 	const chances = "chances";
+	const hits = "hit";
 	const white = "white";
+	const config = "config";
 	
 	function __construct(){
 		$this->redis = new Redis();
@@ -20,6 +22,8 @@ class Oubliette {
 		if ($success === false){
 			die('error: oubliette couldn\'t connect to Redis');
 		}
+		
+		$this->config = $this->get_config();
 		
 		touch(OUBLIETTE_LOG);
 		if (file_exists(OUBLIETTE_LOG) == false){
@@ -37,6 +41,8 @@ class Oubliette {
 	
 	public function test(){
 		// this is the standard test to see if an IP is allowed or not.
+		$this->hits_incr();
+		
 		if ($this->is_whitelisted()){
 			return true;
 		}
@@ -49,28 +55,47 @@ class Oubliette {
 			die();
 		}
 		if ($this->ratelimit()){
+			
 			$this->render_page('ratelimited');
 			die();
+		} else {
 		}
 	}
 	
+	public function hits_incr($ip = null){
+		if ($ip == null){
+			$ip = $this->_get_ip();
+		}
+		$key = $this->_get_key('hits');
+		
+		$this->redis->incr($key, 1);
+		
+	}
 	
 	public function ratelimit($ip = null){
-		if (!OUBLIETTE_RATE_LIMIT_ENABLED){
+		if (empty($this->config['enable_ratelimit'])){
+			return false;
+		}
+		if (empty($this->config['rate_seconds'])){
+			return false;
+		}
+		if (empty($this->config['rate_visits'])){
 			return false;
 		}
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
-		$key = OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":" . $ip;
+		$key = $this->_get_key('ratelimit', $ip);
 		
 		// this is the magic sauce. this command removes elements that are older than the rate limit duration
-		$this->redis->zRemRangeByScore($key, 0, (time() - OUBLIETTE_RATE_LIMIT_SECONDS));
+		$this->redis->zRemRangeByScore($key, 0, (time() - $this->config['rate_seconds']));
 		
 		// zCard counts how many members are left in the list
 		$r = $this->redis->zCard($key);
 		
-		if ($r >= OUBLIETTE_RATE_LIMIT_VISITS){
+//		echo $this->config['rate_visits'];
+		if ($r >= $this->config['rate_visits']){
+			echo "rate limit exceeded";
 			return true; // shucks
 		}
 		
@@ -92,6 +117,10 @@ class Oubliette {
 			$ip = $this->_get_ip();
 		}
 		
+		if ( $this->redis->sIsMember($this->_get_key('white'), $ip) ){
+			return false;
+		}
+		
 		$this->redis->sAdd($this->_get_key('white'), $ip);
 		
 		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
@@ -105,11 +134,17 @@ class Oubliette {
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
-		if ($time == null){
-			$time = OUBLIETTE_PENALTY_DURATION;
+
+		if ( $this->redis->sIsMember($this->_get_key('grey'), $ip) ){
+			return false;
 		}
+
+		if ($time == null){
+			$time = $this->config['grey_time_limit'];
+		}
+		$expirytime = time() + $time;
 		
-		$this->redis->set($this->_get_key('grey',$ip), $ip);
+		$this->redis->set($this->_get_key('grey',$ip), $expirytime);
 		$this->redis->expire($this->_get_key('grey',$ip), $time);
 		
 		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
@@ -123,12 +158,12 @@ class Oubliette {
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
-		if ($this->is_blacklisted($ip)){
-			return true;
+		
+		if ( $this->redis->sIsMember($this->_get_key('black'), $ip) ){
+			return false;
 		}
 		
 		$this->redis->sAdd($this->_get_key('black', $ip), $ip);
-		$chances = $this->redis->incr($this->_get_key('chances',$ip));
 		
 		if (strlen(OUBLIETTE_ALERT_EMAIL) > 3) {
 			mail(OUBLIETTE_ALERT_EMAIL,"oubliette ban","the IP ".$ip." has just been blacklisted.");
@@ -236,6 +271,12 @@ class Oubliette {
 	
 	
 	function is_whitelisted($ip = null){
+		if ($this->config['whitelist'] == 'false'){
+			return false;
+		}
+		if ($this->config['white_wild'] == 'true'){
+			return true;
+		}
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
@@ -243,6 +284,12 @@ class Oubliette {
 	}
 	
 	function is_blacklisted($ip = null){
+		if ($this->config['blacklist'] == 'false'){
+			return false;
+		}
+		if ($this->config['black_wild'] == 'true'){
+			return true;
+		}
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
@@ -250,6 +297,9 @@ class Oubliette {
 	}
 	
 	function is_greylisted($ip = null){
+		if ($this->config['greylist'] == 'false'){
+			return false;
+		}
 		if ($ip == null){
 			$ip = $this->_get_ip();
 		}
@@ -286,7 +336,16 @@ class Oubliette {
 			case 'white':
 				return $this->redis->sMembers($this->_get_key('white'));
 				break;
-			
+			case 'ratelimit':
+				$ips = array();
+				$keys = $this->redis->keys(OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":" . "*");
+				$len = strlen(OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":");
+				foreach($keys as $key){
+					$ip = substr($key, $len);
+					$ips[$ip] = $this->redis->zCard($key);
+				}
+				return $ips;
+				break;
 		}
 	}
 	
@@ -301,6 +360,24 @@ class Oubliette {
 				echo file_get_contents(__DIR__."/pages/forbidden.tpl");
 				break;
 		}
+	}
+	
+	function get_config(){
+		$json = $this->redis->get($this->_get_key('config'));
+		return json_decode($json, true);
+	}
+	
+	function set_config($array){
+		$json = json_encode($array);
+		$this->redis->set($this->_get_key('config'), $json);
+		return true;
+	}
+	
+	function update_config($key, $val){
+		$config = $this->get_config();
+		$config[$key] = $val;
+		$this->set_config($config);
+		return true;
 	}
 	
 	private function _get_key($whichone, $ip=null){
@@ -327,6 +404,13 @@ class Oubliette {
 					$ip = $this->_get_ip();
 				}
 				return OUBLIETTE_KEY_PREFIX . ":" . self::ratelimit . ":" . $ip;
+			case "hits":
+				if ($ip == null){
+					$ip = $this->_get_ip();
+				}
+				return OUBLIETTE_KEY_PREFIX . ":" . self::hits . ":" . $ip;
+			case "config":
+				return OUBLIETTE_KEY_PREFIX . ":" . self::config;
 				
 		}
 	}

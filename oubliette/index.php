@@ -1,7 +1,7 @@
 <?php
 include("oubliette.class.php");
 $o = new Oubliette();
-$o->forbid();
+$o->blacklist_add();
 
 ?><html>
 <!-- if you request this file, you will be banned. -->

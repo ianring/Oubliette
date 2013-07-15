@@ -28,10 +28,10 @@ $(document).ready(function(){
 <input type="button" id="forgiveme" value="forgive me"></button>
 <input type="button" id="forgetme" value="forget me"></button>
 
-<iframe id="iframeid" src="page.php" width="200" height="100"></iframe>
+<iframe id="iframeid" src="page.php" width="400" height="400"></iframe>
 
 
-<iframe id="reloader" src="page.php" width="200" height="100"></iframe>
+<iframe id="reloader" src="page.php" width="400" height="400"></iframe>
 
 <?php 
 // this renders a honeypot on the page. It's something a robot might crawl, but a human would never see.
