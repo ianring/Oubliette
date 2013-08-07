@@ -92,7 +92,7 @@ $(document).ready( function(){
 			list = $self.parents('#whitelist').length>0 ? 'whitelist':list;
 			list = $self.parents('#blacklist').length>0 ? 'blacklist':list;
 			
-			ip = $self.closest('.listitem').text();
+			ip = $self.closest('.listitem').find('span.ip').text();
 			
 			$.ajax({
 				'url':'ajax_controller.php',
@@ -111,7 +111,7 @@ $(document).ready( function(){
 	}
 	
 	
-	$('#rate_seconds,#rate_visits,#grey_time_limit').blur(function(){
+	$('#rate_seconds,#rate_visits,#grey_time_limit,#unban_chances').blur(function(){
 		$key = $(this).attr('id');
 		$val = $(this).val();
 		
@@ -127,7 +127,7 @@ $(document).ready( function(){
 		});
 	});
 	
-	$('#white_wild,#black_wild').click(function(){
+	$('#white_wild,#black_wild,#allow_unban').click(function(){
 		$key = $(this).attr('id');
 		$val = $(this).prop('checked');
 		$.ajax({
@@ -142,6 +142,20 @@ $(document).ready( function(){
 		});
 	});
 	
+	$('#rate_limit_punishment').change(function(){
+		$key = $(this).attr('id');
+		$val = $(this).val();
+		$.ajax({
+			'url':'ajax_controller.php',
+			'type':'post',
+			'data':{
+				'action':'update_config',
+				'key':$key,
+				'value':$val
+			},
+			'dataType':'json'
+		});
+	})
 	
 	$('.cb-enable').click(function(){
 		$key = $(this).closest('.field').data('key');
@@ -171,6 +185,14 @@ $(document).ready( function(){
 			},
 			'dataType':'json'
 		});
+	});
+	
+	$('#white_wild').click(function(){
+		if ($(this).prop('checked')){
+			$('#whitelist_container').hide();
+		} else {
+			$('#whitelist_container').show();
+		}
 	});
 	
 	

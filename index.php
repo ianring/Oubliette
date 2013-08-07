@@ -78,7 +78,7 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 	<div class="row">
 		<div class="span4">
 			<h3>Why?</h3>
-			<p>Because Linux doesn't provide a good flexible way to maintain a central IP blacklist on a LAMP stack. No one wants to add "Deny from" lines to an htaccess file. And there's just no decent way to add an IP to iptables from your app logic.</p>
+			<p>Because Linux doesn't provide a good flexible way to maintain a central IP blacklist on a LAMP stack. iptables, editing .htaccess, and even fail2ban... they're complicated and difficult to configure.</p>
 			<p>Oubliette exists out of necessessity. The author needed this tool. You probably do, too.</p>
 		</div>
 		<div class="span4">
@@ -134,7 +134,7 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 				<img src="assets/turnstile.png" />
 			</div>
 			<h3>Rate Limiter</h3>
-			<p>The Rate Limiter puts a limit on how many requests are allowed within a span of time. The rate limiter can also trigger addition to the penalty box, or into jail.</p>
+			<p>The Rate Limiter puts a limit on how many requests are allowed within a span of time. Normally the rate limiter will merely stifle excessive requests, but the rate limiter can also put offenders on the blacklist or greylist.</p>
 		</div>
 	</div>
 	
@@ -144,7 +144,8 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 				<img src="assets/honeypot.png" />
 			</div>
 			<h3>Honey Pot</h3>
-			<p>The Honey Pot is a tool that will trap robotic non-human visitors who are crawling your site, by leaving conspicuous URLs and links and invisible elements on your page which a robot will click, but a human would not.</p><p>The Honeypot is used in conjunction with the robots.txt file to separate "well-behaved" bots from the "naughty" ones.</p>
+			<p>The Honey Pot is a tool that will trap robotic non-human visitors who are crawling your site, by leaving conspicuous URLs and links and invisible elements on your page which a robot will click, but a human would not.</p>
+			<p>The Honeypot is used in conjunction with the robots.txt file to separate "well-behaved" bots from the "naughty" ones.</p>
 		</div>
 		<div class="span3">
 			<div class="big-icon-holder text-center">
@@ -177,36 +178,31 @@ li.L0, li.L1, li.L2, li.L3, li.L5, li.L6, li.L7, li.L8 {
 		</div>
 		<div class="span8">
 
+<h3>Installing Oubliette isn't hard. Follow these steps:</h3>
 
-<h4>Step One</h4>
-<p>Download Oubliette and put the <tt>oubliette/</tt> folder in your web root</p>
-
-<h4>Step Two</h4>
-<p>Edit the config.php file, to provide the information needed to make Oubliette run.</p>
-
-<h4>Step Three</h4>
-<p>Put this in an <tt>.htaccess</tt> file, in the web root folder.</p>
-
+<ol>
+	<li>Install <a href="http://redis.io">Redis</a></li>
+	<li>Install the <a href="https://github.com/nicolasff/phpredis">PHPRedis extension</a>.</li>
+	<li>Grab <a href="https://github.com/ianring/Oubliette/archive/master.zip">Oubliette from Github</a>, and extract it in your web root.</li>
+	<li>Edit the config.php file to customize your installation</li>
+	<li>
+		<p>Put this in an <tt>.htaccess</tt> file, in the web root folder.</p>
 <pre>
-php_value  auto_prepend_file "./oubliette/include.php"
+php_value auto_prepend_file "[your document root]/oubliette/include.php"
+ErrorDocument 404 /oubliette/include.php
 </pre>
+	</li>
+	<li>Go to the admin console built in to Oubliette. Set your time limits for rate limiting, and flick a switch to enable the Hive.</li>
+</ol>
 
-<p>That will include Oubliette before every page request. Oubliette will perform tests, and block the user if necessary.</p>
-
-<h4>And you're done! But there's more...</h4>
-
-<p>If you don't like automatically prepending Oubliette, you can do it using <tt>include()</tt> or <tt>require()</tt>:
-
-<pre>
-include("./oubliette/include.php");
-</pre>
-
-<p>If you want to build a more customized installation, you can instantiate your own <tt>$oubliette</tt> and call its public methods:</p>
-<pre>
-include("./oubliette/oubliette.class.php");
-$oubliette = new Oubliette();
-$oubliette->test();
-</pre>
+<h4>And you're done!</h4>
+<h4>But wait, there's more!</h4>
+<p>You can also:</p>
+<ul>
+	<li>Add honeypots to your HTML layout, to catch scraper bots</li>
+	<li>Use Oubliette's public methods to add custom jails in your application. For example, if someone enters the wrong password too many times in a row, call <tt>$oubliette->greylist_add()</tt>, and they'll get a time out!</li>
+	<li></li>
+</ul>
 
 <p>More detailed installation instructions are provided in the <a href="docs/">Developer Documentation</a></p>
 			
@@ -224,6 +220,20 @@ $oubliette->test();
 		<div class="span4">
 			<h3>Public Methods</h3>
 			<p>Oubliette has a good collection of public methods that you can access any time you want to manipulate your lists.</p>
+		</div>
+	</div>
+
+	<div class="row">
+		<hr/>
+	</div>
+	
+	<div class="row">
+		<div class="span6">
+			
+		</div>
+		<div class="span4">
+			<h3>Admin Console</h3>
+			<p>Oubliette has a built-in administration console. Use it to cutomize your Oubliette installation.</p>
 		</div>
 	</div>
 	

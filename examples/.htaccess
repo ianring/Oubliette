@@ -1,0 +1,2 @@
+php_value auto_prepend_file "/var/www/html/grawlix.com/oubliette/public_html/examples/oubliette/include.php"
+ErrorDocument 404 /examples/oubliette/include.php
