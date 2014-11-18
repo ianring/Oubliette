@@ -1,0 +1,10 @@
+/phpmyadmin
+/pmyadmin
+/wp-admin
+/wp-includes
+/phplogin
+/admin
+/adminlogin.php
+/wp-admin.php
+/wp-login.php
+/cpanel

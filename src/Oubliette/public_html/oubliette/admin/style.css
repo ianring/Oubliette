@@ -1,0 +1,50 @@
+#blacklist_container{
+	background:black;
+}
+#greylist_container{
+	background:#999;
+}
+#whitelist_container{
+	background:white;
+}
+
+#blacklist_container,#whitelist_container,#greylist_container{
+	border:1px solid #666;
+	padding:10px;
+}
+
+.listitem{
+	border:2px solid #999;
+	border-radius: 10px;
+	margin-bottom:5px;
+	padding:0 0 0 9px;
+	background:white;
+}
+
+.icon {
+	border-bottom:1px solid #666;
+	margin-bottom:18px;
+}
+.icon img{
+	height:60px;
+}
+.switch{
+	display:block;
+	overflow:hidden;
+}
+
+	
+    .cb-enable, .cb-disable, .cb-enable span, .cb-disable span { background: url(assets/switch.gif) repeat-x; display: block; float: left; }
+    .cb-enable span, .cb-disable span { line-height: 30px; display: block; background-repeat: no-repeat; font-weight: bold; }
+    .cb-enable span { background-position: left -90px; padding: 0 10px; }
+    .cb-disable span { background-position: right -180px;padding: 0 10px; }
+    .cb-disable.selected { background-position: 0 -30px; }
+    .cb-disable.selected span { background-position: right -210px; color: #fff; }
+    .cb-enable.selected { background-position: 0 -60px; }
+    .cb-enable.selected span { background-position: left -150px; color: #fff; }
+    .switch label { cursor: pointer; }
+    .switch .switch-checkbox { display: none; }
+    
+.input-xmini {
+    width: 40px;
+} 

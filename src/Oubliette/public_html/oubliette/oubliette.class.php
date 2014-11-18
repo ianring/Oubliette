@@ -1,9 +1,14 @@
 <?php
+// @requires https://github.com/nicolasff/phpredis
 
-namespace Oubliette;
+require_once("config.php");
+
+
 
 class Oubliette {
-
+	
+	// these are used to build redis keys 
+	
 	function __construct(){
 		$this->redis = new Redis();
 		$success = $this->redis->connect(OUBLIETTE_REDIS_HOST, OUBLIETTE_REDIS_PORT);
@@ -506,5 +511,7 @@ class Oubliette {
 	}
 	
 	private function _get_ip(){ return $_SERVER['REMOTE_ADDR']; }
-
+	
 }
+
+?>
