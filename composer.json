@@ -1,0 +1,23 @@
+{
+    "name": "grawlix/oubliette",
+    "description": "A powerful IP banning tool",
+    "keywords":["assets","scripts","css"],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "http://oubliette.grawlix.com/",
+    "authors": [
+    	{
+    		"name": "Ian Ring",
+    		"email": "ian@ianring.com",
+    		"homepage": "http://ianring.com",
+    		"role": "Codeslinger"
+    	}
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "predis/predis": "1.1.*@dev"
+    },
+    "autoload": {
+        "psr-4": {"Oubliette\\": "src/Oubliette"}
+    }
+}
